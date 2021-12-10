@@ -14,12 +14,12 @@ Resources:
                 FromPort: 80
                 ToPort: 80
                 IpProtocol: tcp
-            -   CidrIp: 118.86.184.239/32
+            -   CidrIp: ***.***.***.***/24
                 Description: SG for MyRails Public EC2  SSH Connection
                 FromPort: 22
                 ToPort: 22
                 IpProtocol: tcp
-            -   CidrIp: 118.86.184.239/32
+            -   CidrIp: ***.***.***.***/24
                 Description: SG for MyRails Public EC2 Puma Connection
                 FromPort: 3000
                 ToPort: 3000

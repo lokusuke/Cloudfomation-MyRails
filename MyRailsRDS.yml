@@ -1,0 +1,61 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Create RDS DB Instance
+Parameters:
+ EnvironmentName:
+   Type: String
+   Default: MyRails
+ DBMasterUserName:
+   Type: String
+   Default: ******
+ DBMasterUserPassword:
+   Type: String
+   Default: ******
+ EngineVersion:
+   Default: 8.0.23
+   Type: String
+   AllowedValues:
+    - 8.0.23
+    - 8.0.25
+    - 8.0.26
+ InstanceClass:
+   Default: db.t2.micro
+   Type: String
+   AllowedValues:
+    - db.t2.micro
+    - db.t2.small
+    - db.t2.medium
+    - db.t2.large
+ StorageSize:
+   Default: '20'
+   Type: String
+ SubnetAid:
+   Type: AWS::EC2::Subnet::Id #スタック作成時に既存サブネットを選択
+ SubnetBid:
+   Type: AWS::EC2::Subnet::Id #スタック作成時に既存サブネットを選択
+ VpcID:
+   Type: AWS::EC2::VPC::Id #スタック作成時に既存VPCを選択
+
+Resources:
+ MyRailsDBSubnetGroup: #シングルインスタンス構成のRDSで、AZ障害など発生した場合、サブネットグループ内の別AZのサブネットに、バックアップから新たなインスタンスを作成
+   Type: AWS::RDS::DBSubnetGroup
+   Properties:
+     DBSubnetGroupDescription: MyRails development
+     DBSubnetGroupName: !Sub ${EnvironmentName}-SubnetGroup-dev
+     SubnetIds:
+       - !Ref SubnetAid
+       - !Ref SubnetBid
+ MyRailsDB:
+   Type: AWS::RDS::DBInstance
+   Properties:
+     AllocatedStorage: !Ref 'StorageSize'
+     DBInstanceClass: !Ref 'InstanceClass'
+     DBInstanceIdentifier: myrails-rds
+     DBName: MyRails
+     DBSubnetGroupName: !Ref 'MyRailsDBSubnetGroup'
+     Engine: mysql #データベースエンジン
+     EngineVersion: !Ref 'EngineVersion'
+     MasterUserPassword: !Ref 'DBMasterUserPassword'
+     MasterUsername: !Ref 'DBMasterUserName'
+     PubliclyAccessible: 'false'
+     VPCSecurityGroups:
+       - !ImportValue Rails-Security-Group-For-RDS

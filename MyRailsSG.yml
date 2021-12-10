@@ -1,0 +1,91 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Create Security Group for Rails Study
+Resources:
+    #パブリック公開のEC2用のセキュリティーグループを作成
+    MyRailsPublicSG:
+        Type: AWS::EC2::SecurityGroup
+        DependsOn: MyRailsELBSG
+        Properties: 
+          GroupDescription: SG for MyRails Public EC2
+          GroupName: MyRails-Public-EC2-SG
+          SecurityGroupIngress: 
+            -   SourceSecurityGroupId: !GetAtt MyRailsELBSG.GroupId
+                Description: SG for MyRails Public EC2 HTTP Connection
+                FromPort: 80
+                ToPort: 80
+                IpProtocol: tcp
+            -   CidrIp: 118.86.184.239/32
+                Description: SG for MyRails Public EC2  SSH Connection
+                FromPort: 22
+                ToPort: 22
+                IpProtocol: tcp
+            -   CidrIp: 118.86.184.239/32
+                Description: SG for MyRails Public EC2 Puma Connection
+                FromPort: 3000
+                ToPort: 3000
+                IpProtocol: tcp
+          Tags: 
+              - Key: Environment
+                Value: Dev
+              - Key: Name
+                Value: Rails-Public-EC2-SG
+          VpcId: !ImportValue MyRails-VpcId
+
+    #プライベート用(主にRDS)のセキュリティーグループ
+    MyRailsRDSSG:
+        Type: AWS::EC2::SecurityGroup
+        Properties: 
+          GroupDescription: SG for MyRails RDS
+          GroupName: MyRails-RDS-SG
+          SecurityGroupIngress: 
+            -   SourceSecurityGroupId: !GetAtt MyRailsPublicSG.GroupId  #↑のEC2インスタンス用のセキュリティーグループをアタッチしているEC2からのみアクセス可
+                Description: SG for MyRails RDS Connection
+                FromPort: 3306
+                ToPort: 3306
+                IpProtocol: tcp
+          Tags: 
+              - Key: Environment
+                Value: Dev
+              - Key: Name
+                Value: Rails-RDS-SG
+          VpcId: !ImportValue MyRails-VpcId
+
+    #ELB用のセキュリティーグループ
+    MyRailsELBSG:
+        Type: AWS::EC2::SecurityGroup
+        Properties: 
+          GroupDescription: SG for MyRails ELB
+          GroupName: MyRails-ELB-SG
+          SecurityGroupIngress: 
+            -   CidrIp: 0.0.0.0/0
+                Description: SG for MyRails ELB HTTP Connection
+                FromPort: 80
+                ToPort: 80
+                IpProtocol: tcp
+            -   CidrIp: 0.0.0.0/0
+                Description: SG for MyRails ELB HTTPS Connection
+                FromPort: 443
+                ToPort: 443
+                IpProtocol: tcp
+          Tags: 
+              - Key: Environment
+                Value: Dev
+              - Key: Name
+                Value: Rails-ELB-SG
+          VpcId: !ImportValue MyRails-VpcId
+Outputs:
+    MyRailsPublicSG:
+      Description: the ID of the Security Group for MyRails EC2
+      Value: !GetAtt MyRailsPublicSG.GroupId
+      Export: 
+        Name: Rails-Security-Group-For-EC2
+    MyRailsRDSSG:
+      Description: the ID of the Security Group for MyRails RDS
+      Value: !GetAtt MyRailsRDSSG.GroupId
+      Export: 
+        Name: Rails-Security-Group-For-RDS
+    MyRailsELBSG:
+      Description: the ID of the Security Group for MyRails ELB
+      Value: !GetAtt MyRailsELBSG.GroupId
+      Export: 
+        Name: Rails-Security-Group-For-ELB

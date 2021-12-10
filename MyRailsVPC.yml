@@ -1,0 +1,166 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Create VPC and Subnet for Rails Study
+Resources:
+    #Rails環境用のVPCを10.2.0.0/16で作成
+    MyRailsVPC:
+        Type: AWS::EC2::VPC
+        Properties:
+            CidrBlock: 10.2.0.0/16
+            EnableDnsHostnames: 'true'
+            EnableDnsSupport: 'true'
+            InstanceTenancy: default
+            Tags: 
+                - Key: Environment
+                  Value: Dev
+                - Key: Name
+                  Value: Rails-VPC
+    #Rails環境用のVインターネットゲートウェイを作成
+    MyRailsIGW:
+        Type: AWS::EC2::InternetGateway
+        Properties: 
+            Tags: 
+              - Key: Environment
+                Value: Dev
+              - Key: Name
+                Value: Rails-IGW
+    #インターネットゲートウェイをVPCにアタッチ
+    AttachMyRailsIGW:
+        Type: AWS::EC2::VPCGatewayAttachment
+        Properties: 
+            InternetGatewayId: !Ref MyRailsIGW
+            VpcId: !Ref MyRailsVPC
+    
+    #パブリックサブネット1aを作成
+    PublicSubnet1A:
+        Type: AWS::EC2::Subnet
+        Properties: 
+            VpcId: !Ref MyRailsVPC
+            AvailabilityZone: "ap-northeast-1a"
+            CidrBlock: 10.2.0.0/24
+            MapPublicIpOnLaunch: 'true'
+            Tags: 
+              - Key: Environment
+                Value: Dev
+              - Key: Name
+                Value: Rails-Public-Subnet-1a
+    #プライベートサブネット1aを作成
+    PrivateSubnet1A:
+        Type: AWS::EC2::Subnet
+        Properties: 
+            VpcId: !Ref MyRailsVPC
+            AvailabilityZone: "ap-northeast-1a"
+            CidrBlock: 10.2.1.0/24
+            Tags: 
+              - Key: Environment
+                Value: Dev
+              - Key: Name
+                Value: Rails-Private-Subnet-1a
+    #パブリックサブネット1cを作成
+    PublicSubnet1C:
+        Type: AWS::EC2::Subnet
+        Properties: 
+            VpcId: !Ref MyRailsVPC
+            AvailabilityZone: "ap-northeast-1c"
+            CidrBlock: 10.2.2.0/24
+            MapPublicIpOnLaunch: 'true'
+            Tags: 
+              - Key: Environment
+                Value: Dev
+              - Key: Name
+                Value: Rails-Public-Subnet-1c
+    #プライベートサブネット1cを作成
+    PrivateSubnet1C:
+        Type: AWS::EC2::Subnet
+        Properties: 
+            VpcId: !Ref MyRailsVPC
+            AvailabilityZone: "ap-northeast-1c"
+            CidrBlock: 10.2.3.0/24
+            Tags: 
+              - Key: Environment
+                Value: Dev
+              - Key: Name
+                Value: Rails-Private-Subnet-1c
+
+    #パブリックサブネット用ルートテーブルの作成
+    PublicRouteTable:
+        Type: AWS::EC2::RouteTable
+        Properties: 
+            Tags: 
+              - Key: Environment
+                Value: Dev
+              - Key: Name
+                Value: Rails-Public-Route-Table
+            VpcId: !Ref MyRailsVPC
+
+    #ルートテーブル内のルート編集（パブリックサブネット用）
+    PublicRoute:
+        Type: AWS::EC2::Route
+        Properties: 
+            DestinationCidrBlock: 0.0.0.0/0
+            GatewayId: !Ref MyRailsIGW
+            RouteTableId:  !Ref PublicRouteTable
+    #パブリックサブネット1aにパブリックルートテーブルをアソシエーション
+    PublicRouteTableAssciation1A:
+        Type: AWS::EC2::SubnetRouteTableAssociation
+        Properties: 
+            RouteTableId: !Ref PublicRouteTable
+            SubnetId: !Ref PublicSubnet1A
+    #パブリックサブネット1cにパブリックルートテーブルをアソシエーション
+    PublicRouteTableAssciation1C:
+        Type: AWS::EC2::SubnetRouteTableAssociation
+        Properties: 
+            RouteTableId: !Ref PublicRouteTable
+            SubnetId: !Ref PublicSubnet1C
+
+    #プライベートサブネット用ルートテーブルの作成
+    PrivateRouteTable:
+        Type: AWS::EC2::RouteTable
+        Properties: 
+            Tags: 
+              - Key: Environment
+                Value: Dev
+              - Key: Name
+                Value: Rails-Private-Route-Table
+            VpcId: !Ref MyRailsVPC
+    #プライベートサブネット1aにプライベートルートテーブルをアソシエーション
+    PrivateRouteTableAssciation1A:
+        Type: AWS::EC2::SubnetRouteTableAssociation
+        Properties: 
+            RouteTableId: !Ref PrivateRouteTable
+            SubnetId: !Ref PrivateSubnet1A
+    #プライベートサブネット1cにプライベートルートテーブルをアソシエーション
+    PrivateRouteTableAssciation1C:
+        Type: AWS::EC2::SubnetRouteTableAssociation
+        Properties: 
+            RouteTableId: !Ref PrivateRouteTable
+            SubnetId: !Ref PrivateSubnet1C
+
+    #クロススタックのためにリソースIDをアウトプット
+Outputs:
+    MyRailsVPC:
+        Description: the ID of the MyRailsVPC
+        Value: !Ref MyRailsVPC
+        Export:
+          Name: !Sub "${AWS::StackName}-VpcId"
+    PublicSubnet1A:
+        Description: the ID of the PublicSubnet1A
+        Value: !Ref PublicSubnet1A
+        Export:
+          Name: !Sub "${AWS::StackName}-Public-Subnet-1A"
+    PublicSubnet1C:
+        Description: the ID of the PublicSubnet1C
+        Value: !Ref PublicSubnet1C
+        Export:
+          Name: !Sub "${AWS::StackName}-Public-Subnet-1C"
+    PrivateSubnet1A:
+        Description: the ID of the PrivateSubnet1A
+        Value: !Ref PrivateSubnet1A
+        Export:
+          Name: !Sub "${AWS::StackName}-Private-Subnet-1A"
+    PrivateSubnet1C:
+        Description: the ID of the PrivateSubnet1C
+        Value: !Ref PrivateSubnet1C
+        Export:
+          Name: !Sub "${AWS::StackName}-Private-Subnet-1C"
+
+

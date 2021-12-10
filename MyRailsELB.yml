@@ -1,0 +1,75 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Create ELB
+Parameters:
+  SubnetA:
+    Type: AWS::EC2::Subnet::Id
+  SubnetB:
+    Type: AWS::EC2::Subnet::Id
+
+Resources:
+  #ALBの作成
+  MyRailsELB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties: 
+      #LoadBalancerAttributes: 
+      #  - LoadBalancerAttribute
+      #SubnetMappings: 
+      #  - SubnetMapping
+      IpAddressType: ipv4
+      Name: MyRails-ELB
+      Scheme: internet-facing
+      SecurityGroups: 
+        - !ImportValue Rails-Security-Group-For-ELB
+      Subnets: 
+        - !Ref SubnetA
+        - !Ref SubnetB
+      Tags: 
+        - Key: Name
+          Value: Rails-ELB
+        - Key: Environment
+          Value: Dev
+      Type: application
+  #ターゲットグループの作成
+  MyRailsELBTarget:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties: 
+      #IpAddressType: String
+      #ProtocolVersion: String
+      #TargetGroupAttributes: 
+      #  - TargetGroupAttribute
+      #TargetType: String
+      HealthCheckEnabled: 'true'
+      HealthCheckIntervalSeconds: 10
+      HealthCheckPath: /
+      HealthCheckPort: traffic-port
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 5
+      UnhealthyThresholdCount: 2
+      Matcher: 
+        HttpCode: 200
+      Name: MyRails-ELB-Tg
+      Port: 80
+      Protocol: HTTP
+      Tags: 
+        - Key: Name
+          Value: MyRails-ELB-Tg
+        - Key: Environment
+          Value: Dev
+      Targets: 
+        - Id: !ImportValue Rails-EC2
+          Port: 80
+      VpcId: !ImportValue MyRails-VpcId
+  #リスナーを作成して、ターゲットグループとALBを紐づけ
+  MyRailsELBLisner:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties: 
+      #Certificates: 
+      #  - Certificate
+      #SslPolicy: String
+      DefaultActions: 
+        - TargetGroupArn: !Ref MyRailsELBTarget
+          Type: forward
+      LoadBalancerArn: !Ref MyRailsELB
+      Port: 80
+      Protocol: HTTP

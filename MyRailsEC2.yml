@@ -1,0 +1,51 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Create EC2 Instance
+Parameters:
+  InstanceType:
+    Description: Rails EC2 instance type for development
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+    - t1.micro
+    - t2.nano
+    - t2.micro
+    - t2.small
+    - t2.medium
+    - t2.large
+    ConstraintDescription: must be a valid EC2 instance type for development
+  SubnetId:
+   Type: AWS::EC2::Subnet::Id #スタック作成時に既存サブネットを選択
+  KeyName: 
+    Description : Name of an existing EC2 KeyPair.
+    Type: AWS::EC2::KeyPair::KeyName
+    ConstraintDescription : Can contain only ASCII characters.
+
+Resources:
+  MyRailsEC2:
+    Type: AWS::EC2::Instance
+    Properties: 
+      ImageId: ami-0701e21c502689c31  #「インスタンス作成」押下後の画面に出てくるAmazon Linux2のAMI番号
+      InstanceType: !Ref InstanceType
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeType: gp2
+            VolumeSize: 8
+      NetworkInterfaces: 
+        - AssociatePublicIpAddress: 'true'
+          DeviceIndex: "0"
+          GroupSet: 
+            - !ImportValue Rails-Security-Group-For-EC2
+          SubnetId: !Ref SubnetId
+      Tags:
+              - Key: Environment
+                Value: Dev
+              - Key: Name
+                Value: Rails-EC2
+      KeyName: !Ref KeyName
+Outputs:
+  MyRailsEC2:
+    Description: the ID of the MyRails EC2
+    Value: !Ref MyRailsEC2
+    Export: 
+      Name: Rails-EC2

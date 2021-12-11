@@ -57,7 +57,9 @@ Resources:
         - Key: Environment
           Value: Dev
       Targets: 
-        - Id: !ImportValue Rails-EC2
+        - Id: !ImportValue Rails-EC2-1a
+          Port: 80
+        - Id: !ImportValue Rails-EC2-1c
           Port: 80
       VpcId: !ImportValue MyRails-VpcId
   #リスナーを作成して、ターゲットグループとALBを紐づけ

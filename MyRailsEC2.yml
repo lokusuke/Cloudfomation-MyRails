@@ -134,7 +134,6 @@ Resources:
            export DATABASE_HOST=$(aws ssm get-parameters --region ap-northeast-1 --name /myrails/dev/db-endpoint --query "Parameters[0].Value" --output text)
            export DATABASE_PASSWORD=$(aws ssm get-parameters --with-decryption --region ap-northeast-1 --name /myrails/dev/db-password --query "Parameters[0].Value" --output text)
            export DATABASE_USER=$(aws ssm get-parameters --region ap-northeast-1 --name /myrails/dev/db-user --query "Parameters[0].Value" --output text)
-           export LoadBalancer_DNSName=$(aws elbv2 describe-load-balancers --region ap-northeast-1 --query 'LoadBalancers[*].DNSName[]' --output text)
            
 Outputs:
   MyRailsEC2a:

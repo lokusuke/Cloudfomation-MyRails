@@ -1,9 +1,7 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: Create EC2 Instance
-
-#######################パラメータの作成######################################################
 Parameters:
-  InstanceType1a:  #Public-subnet-1aに作成するEC2のインスタンスタイプ
+  InstanceType:
     Description: Rails EC2 instance type for development
     Type: String
     Default: t2.micro
@@ -15,135 +13,39 @@ Parameters:
     - t2.medium
     - t2.large
     ConstraintDescription: must be a valid EC2 instance type for development
-  SubnetId1a:
-   Type: AWS::EC2::Subnet::Id #スタック作成時に既存サブネットを選択(Public-subnet-1a用)
-  KeyName1a: 
+  SubnetId:
+   Type: AWS::EC2::Subnet::Id 
+  KeyName: 
     Description : Name of an existing EC2 KeyPair.
     Type: AWS::EC2::KeyPair::KeyName
     ConstraintDescription : Can contain only ASCII characters.
-  ImageID1a:                   #スタック作成時に既存AMIを選択(Public-subnet-1a用)
-    Type: AWS::EC2::Image::Id
 
-  InstanceType1c:  #Public-subnet-1cに作成するEC2のインスタンスタイプ
-    Description: Rails EC2 instance type for development
-    Type: String
-    Default: t2.micro
-    AllowedValues:
-    - t1.micro
-    - t2.nano
-    - t2.micro
-    - t2.small
-    - t2.medium
-    - t2.large
-    ConstraintDescription: must be a valid EC2 instance type for development
-  SubnetId1c:
-   Type: AWS::EC2::Subnet::Id #スタック作成時に既存サブネットを選択(Public-subnet-1c用)
-  KeyName1c: 
-    Description : Name of an existing EC2 KeyPair.
-    Type: AWS::EC2::KeyPair::KeyName
-    ConstraintDescription : Can contain only ASCII characters.
-  ImageID1c:                  #スタック作成時に既存AMIを選択(Public-subnet-1c用)
-    Type: AWS::EC2::Image::Id
-
-#######################IAMロール、インスタンスプロファイルの作成###############################
 Resources:
-  IamRoleForMyRails:
-    Description: IAM Role for Rails EC2 in ap-northeast-1a
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - ec2.amazonaws.com
-            Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/AmazonS3FullAccess
-        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
-        - arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess
-
-  InstanceProfileForMyRails: #EC2インスタンスに割り当てるインスタンスプロファイル1
-    Type: "AWS::IAM::InstanceProfile"
-    Properties: 
-      Path: "/"
-      Roles: 
-        - Ref: IamRoleForMyRails
-
-#######################EC2インスタンスの作成################################################
-  MyRailsEC2a:
+  MyRailsEC2:
     Type: AWS::EC2::Instance
     Properties: 
-      ImageId: !Ref ImageID1a  
-      InstanceType: !Ref InstanceType1a
+      ImageId: ami-09da55caaee67283d #Railsアプリ、Nginxを含めたAMI  
+      InstanceType: !Ref InstanceType
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
             VolumeType: gp2
-            VolumeSize: 16 
+            VolumeSize: 8
       NetworkInterfaces: 
         - AssociatePublicIpAddress: 'true'
           DeviceIndex: "0"
           GroupSet: 
             - !ImportValue Rails-Security-Group-For-EC2
-          SubnetId: !Ref SubnetId1a
+          SubnetId: !Ref SubnetId
       Tags:
               - Key: Environment
                 Value: Dev
               - Key: Name
-                Value: Rails-EC2-1a
-      KeyName: !Ref KeyName1a
-      IamInstanceProfile: !Ref InstanceProfileForMyRails
-      UserData:
-        Fn::Base64: |
-           #!/bin/bash
-           yum -y update
-           systemctl enable nginx
-           systemctl start nginx
-           export DATABASE_HOST=$(aws ssm get-parameters --region ap-northeast-1 --name /myrails/dev/db-endpoint --query "Parameters[0].Value" --output text)
-           export DATABASE_PASSWORD=$(aws ssm get-parameters --with-decryption --region ap-northeast-1 --name /myrails/dev/db-password --query "Parameters[0].Value" --output text)
-           export DATABASE_USER=$(aws ssm get-parameters --region ap-northeast-1 --name /myrails/dev/db-user --query "Parameters[0].Value" --output text)
-
-  MyRailsEC2c:
-    Type: AWS::EC2::Instance
-    Properties: 
-      ImageId: !Ref ImageID1c  
-      InstanceType: !Ref InstanceType1c
-      BlockDeviceMappings:
-        - DeviceName: /dev/xvda
-          Ebs:
-            VolumeType: gp2
-            VolumeSize: 16 
-      NetworkInterfaces: 
-        - AssociatePublicIpAddress: 'true'
-          DeviceIndex: "0"
-          GroupSet: 
-            - !ImportValue Rails-Security-Group-For-EC2
-          SubnetId: !Ref SubnetId1c
-      Tags:
-              - Key: Environment
-                Value: Dev
-              - Key: Name
-                Value: Rails-EC2-1c
-      KeyName: !Ref KeyName1c
-      IamInstanceProfile: !Ref InstanceProfileForMyRails
-      UserData:
-        Fn::Base64: |
-           #!/bin/bash
-           export DATABASE_HOST=$(aws ssm get-parameters --region ap-northeast-1 --name /myrails/dev/db-endpoint --query "Parameters[0].Value" --output text)
-           export DATABASE_PASSWORD=$(aws ssm get-parameters --with-decryption --region ap-northeast-1 --name /myrails/dev/db-password --query "Parameters[0].Value" --output text)
-           export DATABASE_USER=$(aws ssm get-parameters --region ap-northeast-1 --name /myrails/dev/db-user --query "Parameters[0].Value" --output text)
-           
+                Value: Rails-EC2
+      KeyName: !Ref KeyName
 Outputs:
-  MyRailsEC2a:
-    Description: the ID of the MyRails EC2 in ap-northeast-1a
-    Value: !Ref MyRailsEC2a
+  MyRailsEC2:
+    Description: the ID of the MyRails EC2
+    Value: !Ref MyRailsEC2
     Export: 
-      Name: Rails-EC2-1a
-  MyRailsEC2c:
-    Description: the ID of the MyRails EC2 in ap-northeast-1c
-    Value: !Ref MyRailsEC2c
-    Export: 
-      Name: Rails-EC2-1c
-
+      Name: Rails-EC2
